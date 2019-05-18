@@ -1,0 +1,206 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title></title>
+    <script src="./js/libs/jquery-1.11.1.min.js"></script>
+    <script>
+        $(function(){
+
+            //remToUpx
+            $("#WebToUni").on("click",function(){
+                $("#title").text("Web To Uni");
+                var text	=$("#oldData").val();
+                $("#newData").val(wx.webToUni(text));
+            });
+
+            //upxToRem
+            $("#UniToWeb").on("click",function(){
+                $("#title").text("Uni To Web");
+                var text	=$("#oldData").val();
+                $("#newData").val(wx.uniToWeb(text));
+            });
+
+        });
+
+
+        var wx	={
+
+            webToUni    :function(str){
+
+                //rem to upx
+                str =str.replace(/\d+\.?\d*rem/g,function(item){
+                    var res = item.match(/\d+\.?\d*/);
+                    return Math.ceil(res[0]*10*2*1.15) + "upx";
+                });
+                
+                //html中：img => image
+                str = str.replace(/<img\s*/g,function(item){
+                    return "<img mode='widthFix' ";
+                });
+
+                //css中：img => image
+                /*
+                str = str.replace(/\s+img\s*{/g,function(item){
+                    return " image{";
+                });
+                */
+
+                //router:this.$router => "router:null,"
+                str = str.replace(/this\.\$router\.push\(([\s\S]*?)\);/g,function(item){
+                    
+                    //获取 name
+                    var meta = /\s*name\s*:\s*(?:\'|\")(.*?)(?:\'|\")/mg.exec(item);
+                    var name    = Array.isArray(meta) && meta.length > 1 ? meta[1]:'';
+
+                    //获取 query
+                    var meta =/\s*query\s*:\s*\{(.*?)\}/mg.exec(item);
+                    var querys  = Array.isArray(meta) && meta.length > 1 ? meta[1]:'';
+                    
+                    if(querys.length > 1){
+                        
+                        return `
+                            uni.navigateTo({
+                                url: '/page/${name}?${querys}
+                            });
+                        `;
+
+                    }else{
+                        return `
+                            uni.navigateTo({
+                                url: '/page/${name}
+                            });
+                        `;
+                    }
+                });
+                
+                // mounted => onLoad
+                str = str.replace(/mounted\(\)/g,function(item){
+                    return "onLoad()";
+                });
+
+                // router-link => navigator
+                str = str.replace(/<(router-link)\s+(\:to=.*?)>[\s\S]*?<\/\1>/mg,function(item){
+
+                    var temp = item.replace(/router-link/g,function(key){
+                        return "navigator";
+                    });
+                    
+                    // 标签中得内容
+                    var meta =/<navigator\s+.*?>([\s\S]*?)<\/navigator>/mg.exec(temp);
+                    var text = Array.isArray(meta) && meta.length > 1 ? meta[1]:'';
+    
+                    //获取 name
+                    var meta = /\s*name\s*:\s*'(.*?)'/mg.exec(temp);
+                    var name    = Array.isArray(meta) && meta.length > 1 ? meta[1]:'';
+
+                    //获取 query
+                    var meta =/\s*query\s*:\s*\{(.*?)\}/mg.exec(temp);
+                    var querys  = Array.isArray(meta) && meta.length > 1 ? meta[1]:'';
+
+                    //构建 params_url
+                    querys = querys.replace(/\'/g,"");
+                    var queryArr = querys.split(",");
+
+                    var resArr  =queryArr.map(element => {
+                        return element.split(":").join("=");
+                    });
+
+                    //长度大于一证明有 params
+                    if(queryArr.length > 1){
+                        return `<navigator url="/pages/${name}?${resArr.join('&')}">${text}</navigator>`;
+                    }else{
+                        return `<navigator url="/pages/${name}">${text}</navigator>`;
+                    }
+                });
+
+                return str;
+            },
+
+            uniToWeb    :function(str){
+
+                //upxToRem
+                str =str.replace(/\d+\.?\d*upx/g,function(item){
+                    var res = item.match(/\d+\.?\d*/);
+                    return (res[0]/(10*2*1.15)).toFixed(1) + "rem";
+                });
+
+                //image => img
+                str = str.replace(/<image\s*/g,function(item){
+                    return "<img ";
+                });
+
+                //image => img
+                str = str.replace(/\s+image\s*{/g,function(item){
+                    return " img{";
+                });
+
+                //goBack() => goBack(this.$router);
+                str = str.replace(/this\.goBack\(\s*\)/g,function(item){
+                    return "this.goBack(this.$router)";
+                });
+
+                //router:this.$router => "router:null,"
+                str = str.replace(/router\s*:\s*null\s*,/g,function(item){
+                    return "router : this.$router,";
+                });
+
+                //替换ajax 中的 .then => .done
+                str = str.replace(/\.then/g,function(item){
+                    return ".done";
+                });
+
+                return str;
+            }
+
+        };
+
+    </script>
+</head>
+<body>
+	<div class="_container">
+
+        
+        <div class="main">
+            <div class="status"><p>当前位置：UNI_APP</p></div>
+
+            <div class="wrapper">
+
+                <div class="box">
+                    <p>原始代码：	<label><input type="text" id="domain" value="http://localhost:8086/_app/" />  : 域名</label></p>
+                    <textarea id="oldData">
+                        // 前往商品详情
+                        goToGoodsDetail(goods_id){
+                            this.$router.push({name:"goodsDetailLink", query:{goods_id}});
+                        }
+                    </textarea>
+                </div>
+
+                <div class="do">
+                    <button id="WebToUni">WebToUni</button>
+                    <button id="UniToWeb">UniToWeb</button>
+                </div>
+
+                <div class="box">
+                    <p id="title">转换后代码：</p>
+                    <textarea id="newData"></textarea>
+                </div>
+
+                <style>
+                    *{ padding:0; margin:0; }
+                    .box{ width:1200px;  margin:0 auto;}
+                    .box textarea{ width:100%; height: 260px; background: #f0f0f0; font-size: 13px; padding:6px;}
+                    .box p{ font-size: 24px; margin:0; line-height: 56px;}
+                    .box p label{ display: inline-block; float:right; width:500px; text-align: right; }
+                    .box p input[type=text]{ width:360px; height: 32px; vertical-align: middle; font-size: 18px; text-indent: 6px;}
+                    .do{ text-align: center; padding:20px 0 10px;}
+                    .do button{ width:160px; height: 40px; font-size: 20px; margin:0 10px; cursor: pointer;}
+                </style>
+
+            </div>
+        </div>
+        <!-- main -->
+
+    </div>
+</body>
+</html>
