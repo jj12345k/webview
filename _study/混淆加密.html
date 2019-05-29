@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+<head>
+<title>首页</title>
+<meta charset="utf-8">
+<link rel="stylesheet" type="text/css" href="css/libs/CSSRESET.css">
+<link rel="stylesheet" type="text/css" href="css/common.css">
+<script src="js/libs/jquery-1.11.1.min.js"></script>
+<script src="js/libs/base64.min.js"></script>
+<script>
+    $(function(){
+
+        var str = "吴荣泰.@?";
+        var key = "http://www.mz-studio.cn";
+
+        var base = "abcdefg";        
+        var res = "你".codePointAt(0).toString(16)
+        
+        var encrypt = hx(str,true);
+
+        /*
+            加密过程：
+        */
+        function hx(str,isEnc){
+            if(isEnc){
+                var mixArr = [];
+                var strArr = str.split("");
+                
+                strArr.forEach(item => {
+                    mixArr.push(item.codePointAt(0).toString(16));
+                });
+                
+                return Base64.encode(JSON.stringify(mixArr));
+            }else{
+                var decodeStr   = Base64.decode(str);
+                var codeArr     = JSON.parse(decodeStr);
+                var strArr      = [];
+                codeArr.forEach(item => {
+                    strArr.push(String.fromCharCode("0x"+item));
+                });
+
+                return strArr.join("");
+            }
+        }
+
+    });
+</script>
+</head>
+<body>
+    
+    <div class="just test">测试文件而已了~</div>
+
+    <div>我又再次编辑了文件了~</div>
+
+</body>
+</html>
